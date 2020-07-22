@@ -7,20 +7,61 @@ import math
 from copy import deepcopy
 
 
-# DEFINE GLOBAL PARAMETERS OF THE MODEL
-# N = 25  # number of neurons in the network
-# threshold = 60  # the threshold of activation of neuron, in mV, used in functions
-# Vmax = 120  # the potential of neuron when pass the seuil
-# Vmin = -10  # the min potential of neuron
-# nb_steps = 500  # number of simulation
-# beta = 0.6  # the lost coefficient when transmitting potential from a neuron to another
-# gamma = 0.9  # the coefficient of leaking potential
-
-
 class SimplifiedModel:
-    threshold = 60  # the threshold of activation of neuron, in mV, used in functions
-    Vmax = 120  # the potential of neuron when pass the seuil
-    Vmin = -10  # the min potential of neuron
+    """---In the first implemented model of a neural network,
+    we try to keep it as simple as possible.---
+
+    A neuron's functionning capability is controlled by its potential
+    stored within. Its potential can be positive or negative and
+    measured by mV (mili-voltage). A neuron can emit and receive
+    potential to and from other neurons in the network under certain
+    conditions. At a given moment t, an inactive neuron i of potential
+    V(i, t) receives a weighted sum of potentials from all other neurons
+    that connect to its dendrites (entrances) and add that sum to its
+    current potential, which equals to the neuron's potential at the
+    moment (t+1).
+
+    If the potential surpasses a certain threshold, it will
+    immediately increase to a maximum potential called Vmax. At this moment,
+    the neuron i becomes "overcharged" and switches to "active" mode that
+    allows it to emit its potential Vmax to all neurons that connect to its synapse
+    (exit). We define an activate function for a neuron:
+    f(x) = Vmax if x >= threshold else x. In the first model, a neuron can
+    only keep its activated state in one step of simulation. After that, its
+    potential will fall back to 0. We keep track of the state of a neuron
+    by a variable d(i) where d(i, t) = 1 if neuron i is active at step t
+    and =0 otherwise.
+
+    However, the receivers will not receive a potential equal to Vmax.
+    If a neuron can transmit Vmax, a postsynaptic neuron can only receive a
+    potential equal Beta * Vmax where Beta is the lost coefficient during the
+    transmission.
+
+    After the depolarisation, its potential gradually falls down
+    to its rest value Vrest while the neurone itself becomes inefficient to the
+    reception of new messages for a period a millisecond. We will consider this
+    period a step of simulation. In a step of the simulation, the potentials
+    of all the neurons in the network must be updated at the same time from
+    their values of the preceding step.
+
+    We must take into account that even in the case that a neuron does not
+    send nor receive signals in a step, its potential will not be totally
+    preserved to the next step but be leaked. To simplify the decrease of potential,
+    we define a coefficient gamma as a decline linear factor to measure
+    this leakage. In a step of a millisecond, a neuron i preserve
+    (gamma * V(i, t)) mV. Biologically, k is between the interval [0.9, 0.95].\n
+    In bref, the potential of neuron i at step t+1 is equal to the sum of its
+    "leftover" potential from the preceding step and the weighted sum of potential
+    of all neuron that can send signals to it.
+
+    We come up with the first formula to calculate potential of a neuron i at
+    a step (t + 1) in function of its potential at the previous step:
+    V(i, t+1) = f((1 - d(i, t) * gamma * V(i, t)) + beta * sum(d(k, t) * V(k, t)))
+    where k is of all neurons that can transmit to neuron i, d(k, t) is the state of
+    neuron k at step t."""
+
+    threshold = 50.  # the threshold of activation of neuron, in mV, used in functions
+    Vmax = 120.  # the potential of neuron when pass the seuil
 
     def __init__(self, N, beta, gamma):
         self.N = N
@@ -61,59 +102,16 @@ class SimplifiedModel:
     gamma = property(__get_gamma, __set_gamma)
 
     def __str__(self):
-        return f"""The neuron network has {self.N} neurones with \
+        return f"The neuron network has {self.N} neurones with \
                neurons' leakage coefficient of {self.gamma} and \
-               transmission lost coefficient of {self.beta}."""
-
-    def __repr__(self):
-        return """---In the first implemented model of a neural network,
-                we try to keep it as simple as possible.---\n 
-                A neuron's functionning capability is controlled by its potential 
-                stored within. Its potential can be positive or negative and 
-                measured by mV (mili-voltage). A neuron can emit and receive 
-                potential to and from other neurons in the network under certain 
-                conditions. At a given moment t, an inactive neuron i of potential 
-                V(i, t) receives a weighted sum of potentials from all other neurons 
-                that connect to its dendrites (entrances) and add that sum to its 
-                current potential, which equals to the neuron's potential at the 
-                moment (t+1). \n
-                If the potential surpasses a certain threshold, it will 
-                immediately increase to a maximum potential called Vmax. At this moment, 
-                the neuron i becomes "overcharged" and switches to "active" mode that 
-                allows it to emit its potential Vmax to all neurons that connect to its synapse 
-                (exit). We define an activate function for a neuron: 
-                f(x) = Vmax if x >= threshold else x. In the first model, a neuron can 
-                only keep its activated state in one step of simulation. After that, its 
-                potential will fall back to 0. We keep track of the state of a neuron 
-                by a variable d(i) where d(i, t) = 1 if neuron i is active at step t 
-                and =0 otherwise.\n
-                However, the receivers will not receive a potential equal to Vmax. 
-                If a neuron can transmit Vmax, a postsynaptic neuron can only receive a 
-                potential equal Beta * Vmax where Beta is the lost coefficient during the 
-                transmission. \n
-                After the depolarisation, its potential gradually falls down 
-                to its rest value Vrest while the neurone itself becomes inefficient to the 
-                reception of new messages for a period a millisecond. We will consider this
-                period a step of simulation. In a step of the simulation, the potentials 
-                of all the neurons in the network must be updated at the same time from 
-                their values of the preceding step. \n
-                We must take into account that even in the case that a neuron does not 
-                send nor receive signals in a step, its potential will not be totally 
-                preserved to the next step but be leaked. To simplify the decrease of potential,
-                we define a coefficient gamma as a decline linear factor to measure 
-                this leakage. In a step of a millisecond, a neuron i preserve 
-                (gamma * V(i, t)) mV. Biologically, k is between the interval [0.9, 0.95].\n
-                In bref, the potential of neuron i at step t+1 is equal to the sum of its
-                "leftover" potential from the preceding step and the weighted sum of potential
-                of all neuron that can send signals to it.\n
-                # V(i, t+1) = f(gamma * (1 - d(i, t)) * (V(i,t) + beta * sum(d(k, t) * V(k, t))))
-                V(i, t+1) = f((1 - d(i, t) * (gamma * V(i, t) + beta * sum(d(k, t) * V(k, t))))
-                where k is of all neurons that transmit to neuron i."""
+               transmission lost coefficient of {self.beta}. \n  \
+                The network connection is represented by: \n \
+                {np.array(self.syst_links)}"
 
     def init_system_links(self):
         """Create a matrix of 2 dimensions (NxN) which shows the connections between
          neurons in the system. Initiated randomly and stay the same throughout the
-         simulation. (a transpose matrix of the regular matrix)
+         simulation.
         syst_links[i][j] = 1: j connects and can send signal to i, not in reverse
         syst_links[i][j] = 0: j doesnt connect to i
         syst_links[i][i] = gamma/beta where gamma is the factor of leaking potential
@@ -122,12 +120,12 @@ class SimplifiedModel:
                  for j in range(self.N)] for i in range(self.N)]
 
     def init_syst_potential(self):
-        """Create a matrix of 2D that represents the potential of each neuron at
+        """Create a matrix of 1D that represents the potential of each neuron at
          moment t of the simulation.
-        syst_potentiel[i][j] = 0 for every i != j;
-        syst_potentiel[i][i] = value of potential of neuron i
+
+        syst_potentiel[i] = value of potential of neuron i
         The matrix will be initiated with all zeros."""
-        return [[0.0 for j in range(self.N)] for i in range(self.N)]
+        return [0.0 for j in range(self.N)]
 
     def init_syst_state(self):
         """Create a matrix of size (N,) which shows the state of activation of a neuron
@@ -156,10 +154,11 @@ class SimplifiedModel:
     def start_syst(self):
         """Send in the information in form electric ranged between 0 and Vmax (mV)
          to kick off the system."""
+        print("Feed potentials to the system.")
         for i in range(self.N):
-            self.syst_potential[i][i] = self.func_act(
-                self.syst_potential[i][i] + random.uniform(0.0, SimplifiedModel.Vmax))
-            self.syst_state[i] = 1 if self.syst_potential[i][i] >= SimplifiedModel.threshold else 0
+            self.syst_potential[i] = self.func_act(
+                self.syst_potential[i] + random.uniform(0.0, SimplifiedModel.Vmax))
+            self.syst_state[i] = 1 if self.syst_potential[i] >= SimplifiedModel.threshold else 0
 
     def update_system_one_step(self):
         """Calculate the potentials of all the neurons at the time t+1 and also update
@@ -169,19 +168,19 @@ class SimplifiedModel:
         new_potential = deepcopy(self.syst_potential)
         new_state = deepcopy(self.syst_state)
         for i in range(self.N):
-            # new_potential[i][i] = self.func_act(
-            #     self.beta * np.dot(
-            #         self.syst_links[i],
-            #         np.dot(
-            #             self.syst_potential,
-            #             np.add(
-            #                 self.syst_state,
-            #                 np.dot((-1) ** self.syst_state[i], self.matrix_Ni(i)))
-            #         )))
-            new_potential[i][i] = (1 - self.syst_state[i]) * self.func_act(
-                sum([self.beta * self.syst_links[i][j] * self.syst_potential[j][j] * self.syst_state[j]
-                     for j in range(N)]))
-            new_state[i] = 1 if new_potential[i][i] >= SimplifiedModel.threshold else 0
+            # new_potential[i] = (1 - self.syst_state[i]) * self.func_act(
+            #     sum([self.beta * self.syst_links[i][j] * self.syst_potential[j] * self.syst_state[j]
+            #          for j in range(self.N)]))
+            new_potential[i] = self.func_act(
+                self.beta * np.dot(
+                    self.syst_links[i],
+                    (
+                        self.syst_potential *
+                        np.add(
+                            self.syst_state,
+                            np.dot((-1) ** self.syst_state[i], self.matrix_Ni(i)))
+                    )))
+            new_state[i] = 1 if new_potential[i] >= SimplifiedModel.threshold else 0
         self.syst_state = new_state
         self.syst_potential = new_potential
 
